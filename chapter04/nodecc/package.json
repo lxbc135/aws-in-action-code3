@@ -1,6 +1,7 @@
 {
   "dependencies": {
-    "aws-sdk": "2.1139.0",
+    "@aws-sdk/client-ec2": "^3.1156.0",
+    "aws-sdk": "^1.18.0",
     "blessed": "0.1.81"
   },
   "devDependencies": {
