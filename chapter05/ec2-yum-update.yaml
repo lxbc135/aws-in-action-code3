@@ -1,3 +1,4 @@
+# Launch EC2 instance and run yum update in it.
 ---
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'AWS in Action: chapter 5 (yum update)'
@@ -45,6 +46,7 @@ Mappings:
     'us-west-2':
       AMI: 'ami-0e21d4d9303512b8e'
 Resources:
+  # Create a security group
   SecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -53,6 +55,7 @@ Resources:
       Tags:
       - Key: Name
         Value: 'AWS in Action: chapter 5 (yum update)'
+  # Wraps the IAM Role so it can be attached to the EC2 instance
   InstanceProfile:
     Type: 'AWS::IAM::InstanceProfile'
     Properties:
@@ -72,6 +75,7 @@ Resources:
           - 'sts:AssumeRole'
       ManagedPolicyArns:
       - 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore'
+  # Create instance
   Instance:
     Type: 'AWS::EC2::Instance'
     Properties:
@@ -87,9 +91,14 @@ Resources:
       UserData:
         'Fn::Base64': !Sub |
           #!/bin/bash -ex
+          # Setup trap: on error, send failure signal to CloudFormation
           trap '/opt/aws/bin/cfn-signal -e 1 --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}' ERR
           yum -y update
+          # Send success signal to CloudFormation
           /opt/aws/bin/cfn-signal -e 0 --stack ${AWS::StackName} --resource Instance --region ${AWS::Region}
     CreationPolicy:
       ResourceSignal:
+        # CloudFormation waits up to 15 minutes for the instance to send back a success signal via cfn-signal.
+        # If the signal isn't received in time (e.g., yum update hangs or fails),
+        # the stack deployment rolls back automatically.
         Timeout: PT15M

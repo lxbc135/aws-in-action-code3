@@ -1,0 +1,40 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'widdix-style structured single EC2 virtual machine.'
+Parameters:
+  # ParentVPCStack:
+  #   Description: 'Name of the parent VPC stack (e.g., vpc-3azs)'
+  #   Type: String
+
+  InstanceType:
+    Description: 'The EC2 instance class type'
+    Type: String
+    Default: 't2.micro'
+    AllowedValues: ['t2.nano', 't2.micro', 't3.nano', 't3.micro', 't3.small']
+
+  SubnetId:
+    Type: AWS::EC2::Subnet::Id
+
+  IAMRoleName:
+    Description: 'Name of an existing IAM role to attach to the instance'
+    Type: String
+    Default: 'ec2-ssm-core' # optional — prefills the field in the console
+
+Resources:
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: ec2-ssm-core-profile
+      Roles:
+        - !Ref IAMRoleName
+  VirtualMachine:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      # Automatically discovers the latest AMI via an SSM Parameter fallback
+      # Amazon Linux 2023 kernel-6.18 AMI (64-bit (x86), uefi-preferred)
+      ImageId: 'ami-04b938437b69a2c9c'
+      InstanceType: !Ref InstanceType
+      SubnetId: !Ref SubnetId
+        # In production, you would import value from parent stack:
+        # Fn::ImportValue: !Sub '${ParentVPCStack}-SubnetAPublic'
+      # Attach profile to allow connection via SSM Session Manager
+      IamInstanceProfile: !Ref EC2InstanceProfile   # ← reference the profile, not the role
